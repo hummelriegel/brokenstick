@@ -13,24 +13,25 @@ Since we need a value that confirms our statistical approaches, we calculate a p
 
 The idea of the simulation is described in the following.
 
-## Assumptions
-- Stick has a length of 1
-- Distribution of each breakpoint is independent and univariately distributed over the length of the stick
-
-## Calculations
-Run 10_000 iterations of stick breaking:
-- Resulting stick lengths are differences between the start of the stick (0), both breakpoints (sorted ascending), and the maximum (1)
-- Increase number of triangles if all resulting stick lengths are <= 0.5 (stick lengths is >= 0.5 it is not possible to create a triangle)
-- Caculate percentage of triangles in all iterations
-  
-## Verifications
-- Plot the breakpoint distributions (should be equally distributed), the resulting stick lengths (rather shorter than longer lengths) and the number and percentage of resulting triangles (should converge).
-- Run the simulation 100 times to receive confidence intervals (should converge)
-
-## Results
+**Results:**
 We see, that the probability of a triangle converges to 25% after enough iterations (here: 10_000) and this is valid over several runs as well (here: 100).
 
 ![Multiple simulation runs converge to a probability for a triangle of 25%](./img/simulation_default.png)
+
+**Assumptions**
+- Stick has a length of 1
+- Distribution of each breakpoint is independent and univariately distributed over the length of the stick
+
+**Calculation:** 10,000 iterations of virtual stick breaking
+- Resulting stick lengths are differences between the start of the stick (0), both breakpoints (sorted ascending), and the maximum (1)
+- Increase number of triangles if all resulting stick lengths are <= 0.5 (if stick lengths is >= 0.5 it is not possible to create a triangle)
+- Caculate percentage of triangles in all iterations
+  
+**Verification:** 100 runs of the calculations and plotting of distributions
+- breakpoint distributions should be equally distributed
+- resulting stick lengths should be rather shorter than longer
+- number and percentage of resulting triangles should converge
+- confidence intervals should converge
 
 
 ## Probabilitstic Solution
