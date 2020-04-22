@@ -34,6 +34,8 @@ We see, that the probability of a triangle converges to 25% after enough iterati
 
 
 ## Probabilitstic Solution
+* [Stochastic solution with the help of integrals](probability.ipynb)
+
 
 
 

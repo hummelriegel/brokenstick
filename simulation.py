@@ -19,7 +19,13 @@ if __name__ == '__main__':
         upper_limit = np.ones((iterations, 1))
         points = np.concatenate((lower_limit, breakpoints_sorted, upper_limit), axis=1)
         diffs = np.diff(points, axis=1)
-        triangles = (diffs < 0.5).all(axis=1)
+
+        # Check for triangles
+        diffs_ok = (diffs < 0.5).all(axis=1)  # no part is longer than 0.5
+        # the max part is not longer than the two smaller ones together (should be the same result anyway)
+        max_diff_ok = np.amax(diffs, axis=1) < (diffs.sum(axis=1) - np.amax(diffs, axis=1))
+
+        triangles = np.logical_and(diffs_ok, max_diff_ok)
 
         # First Result
         print(
@@ -68,67 +74,56 @@ if __name__ == '__main__':
     # https://hackaday.com/2019/03/07/make-xkcd-style-plots-from-python/
     # https://matplotlib.org/3.1.1/tutorials/text/text_intro.html
 
-    styles = ['default']  # , 'ggplot', 'fivethirtyeight']
+    title = f"Probablilty of a Triangle: {triangle_mean:.2f}$\pm${triangle_std:.2f}\n"\
+            f"after {runs:,} simulation runs with {iterations:,} iterations each"
+    print(title)
 
-    for style in styles:
+    figure_iterations = [100, 1_000, 10_000]
+    number_of_rows = len(figure_iterations)
 
-        with plt.style.context(style):
+    fig, ax = plt.subplots(nrows=number_of_rows, ncols=3, figsize=(15, 3 * number_of_rows))
+    plt.subplots_adjust(wspace=0.4, hspace=0.5)
+    fig.suptitle(title)
 
-            print(f"Rendering Figure in {style} style")
+    for row, max_iteration in enumerate(figure_iterations):
+        # Plot Triangles
+        data_triangles = triangles_dfs[triangles_dfs.iteration <= max_iteration]
 
-            figure_iterations = [100, 1_000, 10_000]
-            number_of_rows = len(figure_iterations)
-            fig, ax = plt.subplots(nrows=number_of_rows, ncols=3, figsize=(15, 3 * number_of_rows))
-            plt.subplots_adjust(wspace=0.4, hspace=0.5)
+        ax_next = ax[row, 0]
+        ax_next.set_title(f"{max_iteration:,} Iterations")
 
-            # plt.title(f"Probablilty of a Triangle: {triangle_mean:.2f}$\pm${triangle_std:.2f}", loc='left',
-            # fontsize=18)
-            # plt.title(f"{runs:,} simulation runs with {iterations:,} iterations each", loc='right',
-            # fontsize=13, color='grey')
+        lns1 = sns.lineplot(x='iteration', y='cumsum_abs', data=data_triangles, ax=ax_next, label="Absolute",
+                            estimator='mean', legend=False)
+        ax_next.set(xlabel='Iteration', ylabel='Count of triangles')
 
-            fig.suptitle(f"Probablilty of a Triangle: {triangle_mean:.2f}$\pm${triangle_std:.2f}\n"
-                         f"after {runs:,} simulation runs with {iterations:,} iterations each")
+        ax_next_twin = ax_next.twinx()
+        lns2 = sns.lineplot(x='iteration', y='cumsum_rel', data=data_triangles, ax=ax_next_twin, color='r',
+                            label="Relative", estimator='mean', legend=False)
+        ax_next_twin.set(ylabel='Percentage of triangles [%]')
+        ax_next_twin.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
 
-            for row, max_iteration in enumerate(figure_iterations):
-                # Plot Triangles
-                data_triangles = triangles_dfs[triangles_dfs.iteration <= max_iteration]
+        lns = lns1.lines + lns2.lines
+        labs = [l.get_label() for l in lns]
+        ax_next.legend(lns, labs, loc=0)
 
-                ax_next = ax[row, 0]
-                ax_next.set_title(f"{max_iteration:,} Iterations")
+        # Plot Distribution of Breakpoints
+        data_breakpoints = breakpoints_dfs[breakpoints_dfs.iteration <= max_iteration]
+        data_breakpoints = list(data_breakpoints.lower_break) + list(data_breakpoints.higher_break)
 
-                lns1 = sns.lineplot(x='iteration', y='cumsum_abs', data=data_triangles, ax=ax_next, label="Absolute",
-                                    estimator='mean', legend=False)
-                ax_next.set(xlabel='Iteration', ylabel='Count of triangles')
+        ax_next = ax[row, 1]
+        sns.distplot(data_breakpoints, bins=10, ax=ax_next)
+        ax_next.set(xlabel='Position of breaks on original stick [% of original length]', ylabel='Density [%]')
+        ax_next.set_xlim(0, 1)
 
-                ax_next_twin = ax_next.twinx()
-                lns2 = sns.lineplot(x='iteration', y='cumsum_rel', data=data_triangles, ax=ax_next_twin, color='r',
-                                    label="Relative", estimator='mean', legend=False)
-                ax_next_twin.set(ylabel='Percentage of triangles [%]')
-                ax_next_twin.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
+        # Plot Distribution of Stick Lengths
+        data_diffs = diffs_dfs[breakpoints_dfs.iteration <= max_iteration]
+        data_diffs = list(data_diffs.diff_lower_bound) + list(data_diffs.diff_between) + list(
+            data_diffs.diff_upper_bound)
 
-                lns = lns1.lines + lns2.lines
-                labs = [l.get_label() for l in lns]
-                ax_next.legend(lns, labs, loc=0)
+        ax_next = ax[row, 2]
+        sns.distplot(data_diffs, bins=10, ax=ax_next)
+        ax_next.set(xlabel='Length of resulting sticks after breaking [% of original length]',
+                    ylabel='Density [%]')
+        ax_next.set_xlim(0, 1)
 
-                # Plot Distribution of Breakpoints
-                data_breakpoints = breakpoints_dfs[breakpoints_dfs.iteration <= max_iteration]
-                data_breakpoints = list(data_breakpoints.lower_break) + list(data_breakpoints.higher_break)
-
-                ax_next = ax[row, 1]
-                sns.distplot(data_breakpoints, bins=10, ax=ax_next)
-                ax_next.set(xlabel='Position of breaks on original stick [% of original length]', ylabel='Density [%]')
-                ax_next.set_xlim(0, 1)
-
-                # Plot Distribution of Stick Lengths
-                data_diffs = diffs_dfs[breakpoints_dfs.iteration <= max_iteration]
-                data_diffs = list(data_diffs.diff_lower_bound) + list(data_diffs.diff_between) + list(
-                    data_diffs.diff_upper_bound)
-
-                ax_next = ax[row, 2]
-                sns.distplot(data_diffs, bins=10, ax=ax_next)
-                ax_next.set(xlabel='Length of resulting sticks after breaking [% of original length]',
-                            ylabel='Density [%]')
-                ax_next.set_xlim(0, 1)
-
-            fig.savefig(f"img/simulation_{style}.png", dpi=360)
-            # plt.show()
+    fig.savefig(f"img/simulation_default.png", dpi=360)
